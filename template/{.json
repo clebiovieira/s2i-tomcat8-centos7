@@ -1,0 +1,247 @@
+{
+    "kind": "Template",
+    "apiVersion": "v1",
+    "metadata": {
+        "annotations": {
+            "iconClass" : "icon-tomcat",
+            "description": "Application template for JavaEE WAR deployment with Tomcat 8."
+        },
+        "name": "s2i-tomcat8-centos7"
+    },
+    "labels": {
+        "template": "s2i-tomcat8-centos7"
+    },
+    "parameters": [
+        {
+            "description": "Tomcat 8.5.15",
+            "name": "IMG_VERSION",
+	    "displayName":"Image Version",
+            "value": "latest"
+        },
+        {
+            "description": "The name for the application.",
+            "name": "APP_NAME",
+	    "displayName":"Application Name",
+            "value": "helloworld"
+        },
+        {
+            "description": "Git source URI for application",
+            "name": "GIT_URI"
+        },
+        {
+            "description": "Git branch/tag reference",
+            "name": "GIT_REF",
+            "value": "master"
+        },
+        {
+            "description": "Path within Git project to build; empty for root project directory.",
+            "name": "GIT_CONTEXT_DIR",
+            "value": ""
+        },
+        {
+            "description": "Github trigger secret",
+            "name": "GITHUB_TRIGGER_SECRET",
+            "from": "[a-zA-Z0-9]{8}",
+            "generate": "expression"
+        },
+        {
+            "description": "Generic build trigger secret",
+            "name": "GENERIC_TRIGGER_SECRET",
+            "from": "[a-zA-Z0-9]{8}",
+            "generate": "expression"
+        }
+    ],
+    "objects": [
+        {
+            "kind": "Service",
+            "apiVersion": "v1",
+            "spec": {
+                "ports": [
+                    {
+                        "port": 8080,
+                        "targetPort": 8080
+                    }
+                ],
+                "selector": {
+                    "deploymentConfig": "${APP_NAME}"
+                }
+            },
+            "metadata": {
+                "name": "${APP_NAME}",
+                "labels": {
+                    "application": "${APP_NAME}"
+                },
+                "annotations": {
+                    "description": "The web server's http port."
+                }
+            }
+        },
+        {
+            "kind": "Route",
+            "apiVersion": "v1",
+            "id": "${APP_NAME}",
+            "metadata": {
+                "name": "${APP_NAME}",
+                "labels": {
+                    "application": "${APP_NAME}"
+                },
+                "annotations": {
+                    "description": "Route for application's http service."
+                }
+            },
+            "spec": {
+                "host": "",
+                "to": {
+                    "kind": "Service",
+                    "name": "${APP_NAME}"
+                }
+            }
+        },
+        {
+            "kind": "ImageStream",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "${APP_NAME}",
+                "labels": {
+                    "application": "${APP_NAME}"
+                }
+            }
+        },
+        {
+            "kind": "BuildConfig",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "${APP_NAME}",
+                "labels": {
+                    "application": "${APP_NAME}"
+                }
+            },
+            "spec": {
+                "source": {
+                    "type": "Git",
+                    "git": {
+                        "uri": "${GIT_URI}",
+                        "ref": "${GIT_REF}"
+                    },
+                    "contextDir":"${GIT_CONTEXT_DIR}"
+                },
+                "strategy": {
+                    "type": "Source",
+                    "sourceStrategy": {
+                        "from": {
+                            "kind": "ImageStreamTag",
+                            "namespace": "openshift",
+                            "name": "s2i-tomcat8-centos7:latest"
+                        },
+                        "env": [
+                                    {
+                                        "name": "SVN_URI",
+                                        "value": "${SVN_URI}"
+                                    }
+
+                       ]
+                    }
+                },
+                "output": {
+                    "to": {
+                        "kind": "ImageStreamTag",
+                        "name": "${APP_NAME}:latest"
+                    }
+                },
+                "triggers": [
+                    {
+                        "type": "GitHub",
+                        "github": {
+                            "secret": "${GITHUB_TRIGGER_SECRET}"
+                        }
+                    },
+                    {
+                        "type": "Generic",
+                        "generic": {
+                            "secret": "${GENERIC_TRIGGER_SECRET}"
+                        }
+                    },
+                    {
+                        "type": "ImageChange",
+                        "imageChange": {}
+                    }
+                ]
+            }
+        },
+        {
+            "kind": "DeploymentConfig",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "${APP_NAME}",
+                "labels": {
+                    "application": "${APP_NAME}"
+                }
+            },
+            "spec": {
+                "strategy": {
+                    "type": "Recreate"
+                },
+                "triggers": [
+                    {
+                        "type": "ImageChange",
+                        "imageChangeParams": {
+                            "automatic": true,
+                            "containerNames": [
+                                "${APP_NAME}"
+                            ],
+                            "from": {
+                                "kind": "ImageStream",
+                                "name": "${APP_NAME}"
+                            }
+                        }
+                    }
+                ],
+                "replicas": 1,
+                "selector": {
+                    "deploymentConfig": "${APP_NAME}"
+                },
+                "template": {
+                    "metadata": {
+                        "name": "${APP_NAME}",
+                        "labels": {
+                            "deploymentConfig": "${APP_NAME}",
+                            "application": "${APP_NAME}"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "name": "${APP_NAME}",
+                                "image": "${APP_NAME}",
+                                "imagePullPolicy": "Always",
+                                "readinessProbe": {
+                                    "exec": {
+                                        "command": [
+                                            "/bin/bash",
+                                            "-c",
+                                            "curl http://localhost:8080"
+                                        ]
+                                    }
+                                },
+                                "ports": [
+                                    {
+                                        "name": "http",
+                                        "containerPort": 8080,
+                                        "protocol": "TCP"
+                                    }
+                                ],
+                                "env": [
+                                    {
+                                        "name": "SVN_URI",
+                                        "value": "${SVN_URI}"
+                                    }
+
+                                ]
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    ]
+}
