@@ -3,7 +3,7 @@
 
 FROM openshift/base-centos7
 
-MAINTAINER Sarcouy <sarcouy@protonmail.com>
+MAINTAINER paomian@2dfire.com
 
 EXPOSE 8080
 
