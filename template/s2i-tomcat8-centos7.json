@@ -4,7 +4,8 @@
     "metadata": {
         "annotations": {
             "iconClass" : "icon-tomcat",
-            "description": "Application template for JavaEE WAR deployment with Tomcat 8."
+            "description": "Application template for JavaEE WAR deployment with Tomcat 8.",
+	    "tags": "quickstart,java"
         },
         "name": "s2i-tomcat8-centos7"
     },
