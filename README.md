@@ -1,5 +1,5 @@
 # s2i-tomcat8-centos7
-openshift s2i build tomcat8 app
+openshift s2i build tomcat8 application
 ## 编译image
 * docker build <your docker registry>imagename:tag  .
 * docker push <your docker registy>imagename:tag 
